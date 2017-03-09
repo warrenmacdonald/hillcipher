@@ -71,7 +71,7 @@ def parallel_encrypt(msg_chunk, matrix_dims, encrypt_or_decrypt):
 
     The msg_chunk is passed in as matrices of w/ rows and cols of
     size matrix_dims.  Each msg_chunk is encrypted by multiplying
-    it with secretkey.secret matrix.  Multiplication is handled
+    it with SecretKey.secret matrix.  Multiplication is handled
     via CUDA/GPU.
 
     """
@@ -179,7 +179,7 @@ def dot_prod_decrypt(vector, numbers_dict, matrix_dims):
     return decrypted_mtx
 
 def msg_matrix(message, matrix_dims, ascii_dict):
-    """Split message into square matrices, ASCII encode each string.
+    """Split message into square matrices, encode each string.
 
     Return list of matrices.
     """
@@ -222,10 +222,10 @@ def main():
 
     The list of matrices is then encrypted with parallel_encrypt() and
     appendedto a list until finally the entire message (plus
-    potential white space to ensure.  The encrypted matrices
-    are provided as an argument to the parallel_encrypt()
-    method once again (this time with 'decrypt' toggle), and
-    processed with the secret inverse.
+    potential white space to ensure all matrices are square).  The 
+    encrypted matrices are provided as an argument to the 
+    parallel_encrypt() method once again (this time with 'decrypt' 
+    toggle), and processed with the secret inverse.
 
     """
 
@@ -250,6 +250,7 @@ def main():
         message += ' '*(matrix_dims*matrix_dims - len(message)%(matrix_dims*matrix_dims))
 
     ### Build {ASCII : NUM} and {NUM : ASCII} mappings. ###
+    ### Note: This is not really ASCII, per se, just printable chars. ###
     ascii_dict = dict(zip(string.printable, range(0, ASCII.CHARS)))
     numbers_dict = {y: x for x, y in ascii_dict.items()}
 

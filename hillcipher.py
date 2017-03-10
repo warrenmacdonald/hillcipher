@@ -127,25 +127,20 @@ def dot_prod_encrypt(vector, numbers_dict, matrix_dims):
     secret = SecretKey().get_secret_key().astype(np.float32)
     print('vectors: ', matrix_dims)
     new_mtx = np.zeros(shape=(matrix_dims, matrix_dims)).astype(np.float32)
-
+    krnl = ReductionKernel(
+        np.float32,
+        neutral="0",
+        reduce_expr="a+b",
+        map_expr="x[i]*y[i]",
+        arguments="float *x, float *y"
+        )  
     for k in range(0, len(vector)):
         for i in range(0, len(secret)):
             gsecret = gpuarray.to_gpu(secret[i])
             gi = gpuarray.to_gpu(vector[k])
-            krnl = ReductionKernel(
-                np.float32,
-                neutral="0",
-                reduce_expr="a+b",
-                map_expr="x[i]*y[i]",
-                arguments="float *x, float *y"
-                )
             dot_prod = krnl(gsecret, gi).get() % ASCII.CHARS
-            #print('v: ', numbers_dict[dot_prod])
             msg += numbers_dict[dot_prod]
             new_mtx[k][i] = int(dot_prod)
-            #print(new_mtx[k])
-    #print(new_mtx)
-    #print(msg)
     return new_mtx
 
 def dot_prod_decrypt(vector, numbers_dict, matrix_dims):
@@ -158,23 +153,21 @@ def dot_prod_decrypt(vector, numbers_dict, matrix_dims):
     """
 
     msg = ''
-    #print(vector)
     secretinverse = SecretKey().get_secret_inverse().astype(np.float32)
     decrypted_mtx = np.zeros(shape=(matrix_dims, matrix_dims)).astype(np.float32)
+    krnl = ReductionKernel(
+        np.float32,
+        neutral="0",
+        reduce_expr="a+b",
+        map_expr="x[i]*y[i]",
+        arguments="float *x, float *y"
+        )
     for k in range(0, len(vector)):
         for i in range(0, len(secretinverse)):
             gsecret = gpuarray.to_gpu(secretinverse[i])
             gi = gpuarray.to_gpu(vector[k])
-            krnl = ReductionKernel(
-                np.float32,
-                neutral="0",
-                reduce_expr="a+b",
-                map_expr="x[i]*y[i]",
-                arguments="float *x, float *y"
-                )
             dot_prod = krnl(gsecret, gi).get() % ASCII.CHARS
             msg += numbers_dict[dot_prod]
-            #print("v: ", numbers_dict[dot_prod])
             decrypted_mtx[k][i] = int(dot_prod)
     return decrypted_mtx
 

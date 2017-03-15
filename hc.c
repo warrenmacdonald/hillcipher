@@ -2,14 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define ASCII 100
+#define ASCII 128
 
-void asciiMap(char *ascii_dict) {
-    int i; 
-    for (i = 0; i < 128; i++) {
-        ascii_dict[i] = (char)i;
-    }
-}
 
 void secretKey(int **SKey, int **invSKey, int matrix_dims) {
     int k,z;
@@ -88,7 +82,6 @@ int main(int argc, char *argv[]) {
         strcpy(msg, jack_msg);
     }
     char *ascii_dict = malloc(128);
-    asciiMap(ascii_dict);
     
     //printf("%s", msg);
     int matrix_dims = 4;
@@ -132,8 +125,8 @@ int main(int argc, char *argv[]) {
     int msg_vector_list[strlen(msg)/matrix_size][matrix_size];
     for (i = 0; i < msg_size%matrix_size; i++) {
         for (j = 0; j < matrix_size; j++) {
-            msg_vector_list[i][j] = msg[i*matrix_size + j];
-            printf("%d", msg_vector_list[i][j], "\n");
+            msg_vector_list[i][j] = msg_vector[i*matrix_size + j];
+            printf("%d\n", msg_vector_list[i][j], "\n");
         }
     }
 

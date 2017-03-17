@@ -6,6 +6,10 @@
 #define ASCII_CHARS 128
 
 
+int mod(int a, int b) {
+    
+    return (a%b+b)%b;
+}
 
 void printrow(float *msg_v_list) {
     int i;
@@ -27,13 +31,14 @@ __global__ void mtxEncrypt(float *secretKey, float *msg, float *result, int matr
         float secretElement = secretKey[ty * matrix_dims + k];
         float msgElement = msg[k * matrix_dims + tx];
         
-        printf("\nMultiplying %f by %f: \n", secretElement, msgElement);
+   //     printf("\nMultiplying %f by %f: \n", secretElement, msgElement);
         Pvalue  += secretElement * msgElement;
     }
     
-    printf("PValue: %f\n", Pvalue);
-    result[ty * matrix_dims + tx] = (int)Pvalue%ASCII_CHARS;
-    printf("result: %f\n", result[ty * matrix_dims + tx]);
+    //printf("PValue: %f    %d     %d\n", Pvalue, (int)Pvalue, ((int)Pvalue%ASCII_CHARS+ASCII_CHARS)%ASCII_CHARS);
+    int mod_result = ((int)Pvalue%ASCII_CHARS+ASCII_CHARS)%ASCII_CHARS; // actual modulus function
+    result[ty * matrix_dims + tx] = mod_result;
+   // printf("result: %f\n", result[ty * matrix_dims + tx]);
 }
 
 void secretKey(float **SKey, float **invSKey, int matrix_dims) {
@@ -106,8 +111,8 @@ int main(int argc, char *argv[]) {
             strcpy(msg, argv[1]);
         }
     } else {
-//        const char* jack_msg = "All work and no play makes Jack a dull boy.";
-        const char *jack_msg = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
+        const char* jack_msg = "All work and no play makes Jack a dull boy.";
+//        const char *jack_msg = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
         msg = (char *) malloc(strlen(jack_msg));
         strcpy(msg, jack_msg);
     }
@@ -202,13 +207,10 @@ int main(int argc, char *argv[]) {
         cudaDeviceSynchronize();
     }
 
-    //cudaFree(secretGpu);
 
-    printf("\n\n5\n\n");
     for (i = 0; i < msg_parts; i++) {
-    //    printf("%d %f\n\n\n\n", i, results[i]);
         for (j = 0; j < matrix_size; j++) {
-            printf("%d: %c\n", (int)results[i][j], char((int)results[i][j]));
+            printf("%c", (int)results[i][j], char((int)results[i][j]));
         }
     }
     
@@ -221,16 +223,14 @@ int main(int argc, char *argv[]) {
 
     cudaMemcpy(secretGpu, *invSKey, nBytes, cudaMemcpyHostToDevice);
     for (i = 0; i < msg_parts; i++) {
-        printf("\n\n\nOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\nOOOOOOOOOOOOO\nOOOOOOOOOO\n");
         cudaMemcpy(msgGpu, results[i], nBytes, cudaMemcpyHostToDevice);
         mtxEncrypt<<<grid, block>>>(secretGpu, msgGpu, resultGpu, matrix_dims);
         cudaMemcpy(unEncrypted[i], resultGpu, nBytes, cudaMemcpyDeviceToHost);
         cudaDeviceSynchronize();
     }
-    printf("HELLO");
     for (i = 0; i < msg_parts; i++) {
         for (j = 0; j < matrix_size; j++) {
-            printf("%c", char((int)unEncrypted[i][j]));
+            printf("%c", (int)unEncrypted[i][j], char((int)unEncrypted[i][j]));
         }
     }
     free(results);

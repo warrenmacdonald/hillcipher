@@ -59,6 +59,7 @@ void secretKey(float **SKey, float **invSKey, int matrix_dims) {
 }
 
 void pad_msg(char *msg, int matrix_dims) {
+    printf("Padding..\n");
     int i;
     unsigned int msg_len = strlen(msg);
     int matrix_size = matrix_dims*matrix_dims;
@@ -73,8 +74,7 @@ void pad_msg(char *msg, int matrix_dims) {
 
 void encode_msg(char *msg, float *msg_vector, int matrix_dims) {
     int matrix_size = matrix_dims * matrix_dims;
-    int i = 0, j;
-
+    int i = 0;
     while (msg[i] != '\0') {
         msg_vector[i] = (int)(msg[i]);
         i++;
@@ -106,16 +106,15 @@ int main(int argc, char *argv[]) {
             strcpy(msg, argv[1]);
         }
     } else {
-        const char* jack_msg = "All work and no play makes Jack a dull boy.";
+//        const char* jack_msg = "All work and no play makes Jack a dull boy.";
+        const char *jack_msg = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
         msg = (char *) malloc(strlen(jack_msg));
         strcpy(msg, jack_msg);
     }
     char *ascii_dict = (char *)malloc(128);
 
-    //printf("%s", msg);
     int matrix_dims = 4;
     int matrix_size = matrix_dims*matrix_dims;
-    // int **SKey;
 
 
     // malloc() for 4 (int*) pointers to 4 rows, also malloc'd (int)
@@ -129,9 +128,7 @@ int main(int argc, char *argv[]) {
         invSKey[z] = (float *)malloc(matrix_dims * sizeof(float));
     }
 
-    int msg_size = strlen(msg);
-    printf("STRLEN:  %d     MESSAGE SIZE: %d", strlen(msg), msg_size);
-    // populate secret and inverse secret keys
+    
     secretKey(SKey, invSKey, matrix_dims);
 
     int i, j;
@@ -142,10 +139,13 @@ int main(int argc, char *argv[]) {
         }
     }
     // pad message if not divisible by matrix_dims^2
-    if (msg_size % matrix_size != 0) {
+
+    int msg_size;
+    if (strlen(msg) % matrix_size != 0) {
         pad_msg(msg, matrix_dims);
-        msg_size = strlen(msg);
     }
+    msg_size = strlen(msg);
+    int msg_parts = msg_size / matrix_size;
     printf("%s", msg);
 
     float *msg_vector = (float *)malloc(strlen(msg)*sizeof(float));
@@ -153,8 +153,8 @@ int main(int argc, char *argv[]) {
     encode_msg(msg, msg_vector, matrix_dims);
     printf("ENCODED!\n");
 
-    float msg_vector_list[msg_size/matrix_size][matrix_size];
-    for (i = 0; i < msg_size/matrix_size; i++) {
+    float msg_vector_list[msg_parts][matrix_size];
+    for (i = 0; i < msg_parts; i++) {
         printf("\n\nCount: %d %d\n", i, msg_size%matrix_size);
         for (j = 0; j < matrix_size; j++) {
             msg_vector_list[i][j] = msg_vector[i*matrix_size + j];
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
     printf("1\n");
     float **results = (float **)malloc(msg_size * sizeof(float *));
     printf("2\n");
-    for (z = 0; z < msg_size/matrix_size; z++) {
+    for (z = 0; z < msg_parts; z++) {
         results[z] = (float *)malloc(matrix_size * sizeof(float));
         memset(results[z], 0, nBytes);
     }
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
     cudaMalloc((void **)&secretGpu, nBytes);
 
 
-    printf("msg_size/matrix_size: %d \n", msg_size/matrix_size);
+    printf("msg_parts: %d \n", msg_parts);
     printf("\nmsg_vector_list[1]: %d\n", *msg_vector_list[1]);
 
 
@@ -195,11 +195,7 @@ int main(int argc, char *argv[]) {
     dim3 block(matrix_dims, matrix_dims);
     dim3 grid((matrix_dims+block.x-1)/block.x, (matrix_dims+block.y-1)/block.y);
 
-    for (i = 0; i < msg_size/matrix_size; i++) {
-        printf("\nlist: %f", *msg_vector_list[i]);
-        // printrow(msg_vector_list[i]); this was a sanity check.  i am sane.
-        
-        // this seems to be sending the same row over and over.  why?
+    for (i = 0; i < msg_parts; i++) {
         cudaMemcpy(msgGpu, msg_vector_list[i], nBytes, cudaMemcpyHostToDevice);
         mtxEncrypt<<<grid, block>>>(secretGpu, msgGpu, resultGpu, matrix_dims);
         cudaMemcpy(results[i], resultGpu, nBytes, cudaMemcpyDeviceToHost);
@@ -209,30 +205,30 @@ int main(int argc, char *argv[]) {
     //cudaFree(secretGpu);
 
     printf("\n\n5\n\n");
-    for (i = 0; i < msg_size/matrix_size; i++) {
+    for (i = 0; i < msg_parts; i++) {
     //    printf("%d %f\n\n\n\n", i, results[i]);
         for (j = 0; j < matrix_size; j++) {
-            printf("%c", char((int)results[i][j]));
+            printf("%d: %c\n", (int)results[i][j], char((int)results[i][j]));
         }
     }
     
-    float **unEncrypted = (float **)malloc(3 * sizeof(float *));
-    for (z = 0; z < msg_size/matrix_size; z++) {
+    float **unEncrypted = (float **)malloc(msg_parts * sizeof(float *));
+    for (z = 0; z < msg_parts; z++) {
         unEncrypted[z] = (float *)malloc(matrix_size * sizeof(float));
         memset(unEncrypted[z], 0, nBytes);
     }
      
 
     cudaMemcpy(secretGpu, *invSKey, nBytes, cudaMemcpyHostToDevice);
-    for (i = 0; i < msg_size/matrix_size; i++) {
-        printf("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\nOOOOOOOOOOOOO\nOOOOOOOOOO\n");
+    for (i = 0; i < msg_parts; i++) {
+        printf("\n\n\nOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\nOOOOOOOOOOOOO\nOOOOOOOOOO\n");
         cudaMemcpy(msgGpu, results[i], nBytes, cudaMemcpyHostToDevice);
         mtxEncrypt<<<grid, block>>>(secretGpu, msgGpu, resultGpu, matrix_dims);
         cudaMemcpy(unEncrypted[i], resultGpu, nBytes, cudaMemcpyDeviceToHost);
         cudaDeviceSynchronize();
     }
     printf("HELLO");
-    for (i = 0; i < msg_size/matrix_size; i++) {
+    for (i = 0; i < msg_parts; i++) {
         for (j = 0; j < matrix_size; j++) {
             printf("%c", char((int)unEncrypted[i][j]));
         }

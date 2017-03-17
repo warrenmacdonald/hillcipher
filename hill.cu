@@ -27,7 +27,7 @@ __global__ void mtxEncrypt(float *secretKey, float *msg, float *result, int matr
         float secretElement = secretKey[ty * matrix_dims + k];
         float msgElement = msg[k * matrix_dims + tx];
         
-    //    printf("\nMultiplying %f by %f: \n", secretElement, msgElement);
+        printf("\nMultiplying %f by %f: \n", secretElement, msgElement);
         Pvalue  += secretElement * msgElement;
     }
     
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
         results[z] = (float *)malloc(matrix_size * sizeof(float));
         memset(results[z], 0, nBytes);
     }
-    printf("3\n");
+   printf("3\n");
 
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
@@ -206,20 +206,41 @@ int main(int argc, char *argv[]) {
         cudaDeviceSynchronize();
     }
 
-    cudaFree(msgGpu);
-    cudaFree(resultGpu);
-    cudaFree(secretGpu);
+    //cudaFree(secretGpu);
 
     printf("\n\n5\n\n");
     for (i = 0; i < msg_size/matrix_size; i++) {
     //    printf("%d %f\n\n\n\n", i, results[i]);
         for (j = 0; j < matrix_size; j++) {
-            printf("%d %f\n", i, results[i][j]);
+            printf("%c", char((int)results[i][j]));
         }
     }
+    
+    float **unEncrypted = (float **)malloc(3 * sizeof(float *));
+    for (z = 0; z < msg_size/matrix_size; z++) {
+        unEncrypted[z] = (float *)malloc(matrix_size * sizeof(float));
+        memset(unEncrypted[z], 0, nBytes);
+    }
+     
 
+    cudaMemcpy(secretGpu, *invSKey, nBytes, cudaMemcpyHostToDevice);
+    for (i = 0; i < msg_size/matrix_size; i++) {
+        printf("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\nOOOOOOOOOOOOO\nOOOOOOOOOO\n");
+        cudaMemcpy(msgGpu, results[i], nBytes, cudaMemcpyHostToDevice);
+        mtxEncrypt<<<grid, block>>>(secretGpu, msgGpu, resultGpu, matrix_dims);
+        cudaMemcpy(unEncrypted[i], resultGpu, nBytes, cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+    }
+    printf("HELLO");
+    for (i = 0; i < msg_size/matrix_size; i++) {
+        for (j = 0; j < matrix_size; j++) {
+            printf("%c", char((int)unEncrypted[i][j]));
+        }
+    }
     free(results);
-
+    cudaFree(secretGpu);
+    cudaFree(msgGpu);
+    cudaFree(resultGpu);
     cudaDeviceReset();
 
     
